@@ -1608,7 +1608,7 @@ APP_TEMPLATE = r"""
                   <div class="section-label">Prompting</div>
                   <h2>Article-generation prompt</h2>
                   <div class="actions">
-                    <button type="submit" name="action" value="refresh_prompt" class="secondary">Rebuild prompt</button>
+                    <button type="submit" name="action" value="construct_prompt" class="secondary">Construct Prompt</button>
                     <button type="submit" name="action" value="generate_article">Generate draft</button>
                   </div>
                 </div>
@@ -2632,17 +2632,12 @@ def create_app() -> Flask:
                 context["research_json"] = json.dumps(brief.to_dict())
                 context["brief_sections"] = _brief_sections_for_view(brief_section_values)
                 context["research_notes"] = _render_research_notes_from_sections(brief_section_values)
-                context["draft_prompt"] = pipeline.build_article_prompt(
-                    fact_pack=fact_pack,
-                    research=brief,
-                    story_angle=_primary_story_angle(brief_section_values),
-                    research_notes=context["research_notes"],
-                )
+                context["draft_prompt"] = ""
                 context["article_text"] = ""
                 context["complete_article_text"] = ""
                 context["active_tab"] = "research"
 
-            elif action == "refresh_prompt":
+            elif action == "construct_prompt":
                 fact_pack_dict = _parse_json(str(context["fact_pack_json"]))
                 if not fact_pack_dict or not isinstance(fact_pack_dict, dict):
                     raise ValueError("Run research first so there is material to build the prompt from.")
@@ -2667,7 +2662,7 @@ def create_app() -> Flask:
                     raise ValueError("Choose a company and build research before generating a draft.")
                 prompt_text = str(context["draft_prompt"]).strip()
                 if not prompt_text:
-                    raise ValueError("The article-generation prompt is empty.")
+                    raise ValueError("The article-generation prompt is empty. Click Construct Prompt first.")
                 context["article_text"] = pipeline.draft_from_prompt(ticker, prompt_text)
                 context["complete_article_text"] = ""
                 context["active_tab"] = "write"
