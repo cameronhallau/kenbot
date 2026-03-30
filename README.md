@@ -12,7 +12,7 @@ A lean Python pipeline for:
 
 ## What it does
 
-The app exposes a small CLI that can:
+The app helps you:
 
 - scan a watchlist for notable movers
 - scan the London market directly for UK movers
@@ -53,31 +53,6 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-## Configure
-
-Create a `.env` file or export variables in your shell:
-
-```bash
-export OPENAI_API_KEY="..."
-export OPENAI_MODEL="gpt-4.1-mini"
-```
-
-If you have an FMP key that supports the endpoints you need, you can also set:
-
-```bash
-export FMP_API_KEY="..."
-```
-
-Use OpenRouter instead:
-
-```bash
-export LLM_PROVIDER="openrouter"
-export OPENROUTER_API_KEY="..."
-export OPENROUTER_MODEL="openai/gpt-4.1-mini"
-export OPENROUTER_SITE_URL="https://your-site.example"
-export OPENROUTER_APP_NAME="KenHallBot"
-```
-
 ## GUI
 
 Launch the local interface:
@@ -97,56 +72,17 @@ The GUI is designed around two clean tabs:
 - `Research setup`: scan movers, select a company, edit research guidance before the run, and maintain the working brief item by item under each category
 - `Write and review`: edit the single article-generation prompt, generate the draft with Claude Sonnet 4.6 via OpenRouter, edit the final output, run a final technical details pass, and run review notes against the current version
 
-## Usage
-
-Run the full pipeline for one or more tickers:
-
-```bash
-kenhallbot run --tickers BATS.L SHEL.L
-```
-
-Run the full pipeline from UK market movers:
-
-```bash
-kenhallbot run --uk-market --min-abs-day-move 5
-```
-
-Scan a watchlist for notable movers:
-
-```bash
-kenhallbot scan --tickers BATS.L SHEL.L GSK.L
-```
-
-Scan the London market directly for notable movers:
-
-```bash
-kenhallbot scan --uk-market --min-abs-day-move 5
-```
-
-Build a fact pack only:
-
-```bash
-kenhallbot fact-pack --ticker SHEL.L
-```
-
-## Output
-
-Generated files are written to `output/` by default:
-
-- `movers.json`
-- `{ticker}_fact_pack.json`
-- `{ticker}_research.json`
-- `{ticker}_draft.md`
-- `{ticker}_compliance.json`
-
 ## Customising your voice and rules
 
-Edit these files:
+Use the `Settings` tab in the GUI.
 
-- `config/style_notes.md`
-- the rules file in `config/`
+There you can:
 
-The pipeline loads them automatically for draft and compliance stages.
+- add or update your API keys
+- choose the underlying models used for research, article generation, and final details
+- edit the system prompts used at each stage
+
+If you need to work with the underlying files directly, the app stores its supporting configuration in `config/`.
 
 ## Notes
 

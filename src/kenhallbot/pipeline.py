@@ -5,6 +5,7 @@ from .finance import FMPClient
 from .io_utils import ensure_directory, read_text_if_exists, write_json, write_text
 from .llm import OpenAIClient
 from .models import ComplianceReport, FactPack, MoverCandidate, ResearchBrief
+from .prompts import COMPLIANCE_PROMPT, DRAFT_PROMPT, FINAL_DETAILS_PASS_PROMPT, RESEARCH_PROMPT
 
 DEFAULT_STYLE_NOTES = """
 - Write like a punchy private investor-columnist, not an analyst note
@@ -63,6 +64,18 @@ class Pipeline:
         if override:
             return override
         return read_text_if_exists(self.settings.motley_rules_file, DEFAULT_MOTLEY_RULES)
+
+    def _research_system_prompt(self) -> str:
+        return read_text_if_exists(self.settings.research_prompt_file, RESEARCH_PROMPT)
+
+    def _draft_system_prompt(self) -> str:
+        return read_text_if_exists(self.settings.draft_prompt_file, DRAFT_PROMPT)
+
+    def _compliance_system_prompt(self) -> str:
+        return read_text_if_exists(self.settings.compliance_prompt_file, COMPLIANCE_PROMPT)
+
+    def _final_details_system_prompt(self) -> str:
+        return read_text_if_exists(self.settings.final_details_prompt_file, FINAL_DETAILS_PASS_PROMPT)
 
     def scan(self, tickers: list[str], min_abs_day_move: float = 4.0) -> list[MoverCandidate]:
         movers = self.finance.scan_movers(tickers, min_abs_day_move=min_abs_day_move)
@@ -126,6 +139,7 @@ class Pipeline:
             press_releases,
             price_context,
             article_summaries,
+            system_prompt=self._research_system_prompt(),
         )
         write_json(self.settings.output_dir / f"{ticker}_research.json", brief.to_dict())
         return brief
@@ -145,6 +159,7 @@ class Pipeline:
             local_research,
             self._style_notes(style_notes),
             self._motley_rules(motley_rules),
+            draft_prompt=self._draft_system_prompt(),
         )
         write_text(self.settings.output_dir / f"{ticker}_draft.md", article)
         return article
@@ -160,6 +175,7 @@ class Pipeline:
             article,
             self._style_notes(style_notes),
             self._motley_rules(motley_rules),
+            system_prompt=self._compliance_system_prompt(),
         )
         write_json(self.settings.output_dir / f"{ticker}_compliance.json", report.to_dict())
         return report
@@ -181,6 +197,7 @@ class Pipeline:
             extra_notes,
             self._style_notes(style_notes),
             self._motley_rules(motley_rules),
+            draft_prompt=self._draft_system_prompt(),
         )
         write_text(self.settings.output_dir / f"{ticker}_draft.md", article)
         report = self.compliance(
@@ -221,7 +238,10 @@ class Pipeline:
             prompt_text,
             self._style_notes(style_notes),
         )
-        article = self.article_llm.generate_article_from_prompt(full_prompt)
+        article = self.article_llm.generate_article_from_prompt(
+            full_prompt,
+            system_prompt=self._draft_system_prompt(),
+        )
         write_text(self.settings.output_dir / f"{ticker}_draft.md", article)
         return article
 
@@ -234,6 +254,7 @@ class Pipeline:
         revised_article = self.final_details_llm.final_details_pass(
             article,
             self._motley_rules(motley_rules),
+            system_prompt=self._final_details_system_prompt(),
         )
         write_text(self.settings.output_dir / f"{ticker}_complete.md", revised_article)
         return revised_article

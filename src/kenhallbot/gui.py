@@ -5,8 +5,10 @@ import json
 from flask import Flask, render_template_string, request
 
 from .config import load_settings, save_settings_values
+from .io_utils import read_text_if_exists, write_text
 from .models import FactPack, PricePerformance, ResearchBrief, StandardStats
 from .pipeline import Pipeline
+from .prompts import COMPLIANCE_PROMPT, DRAFT_PROMPT, FINAL_DETAILS_PASS_PROMPT, RESEARCH_PROMPT
 
 
 BRIEF_SECTION_DEFS = (
@@ -491,6 +493,11 @@ APP_TEMPLATE = r"""
       textarea.article-editor,
       .rich-editor {
         min-height: 580px;
+      }
+      textarea.system-prompt-editor {
+        min-height: 220px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.95rem;
       }
       textarea.article-editor,
       .rich-editor {
@@ -1738,6 +1745,50 @@ APP_TEMPLATE = r"""
 
             <div class="button-row">
               <button type="submit" name="action" value="save_settings">Save settings</button>
+              <button
+                type="button"
+                id="toggle_system_prompts"
+                class="secondary"
+                aria-expanded="false"
+                aria-controls="system_prompts_panel"
+              >
+                Edit system prompts
+              </button>
+              <div class="hint">Show the editable system prompts used for research, draft generation, compliance, and final details.</div>
+            </div>
+
+            <div id="system_prompts_panel" hidden>
+              <div class="button-row">
+                <div class="hint">These are the internal stage prompts sent to the model. They will collapse again after you save.</div>
+              </div>
+
+              <label class="editor-label" for="research_system_prompt">Research system prompt</label>
+              <textarea
+                id="research_system_prompt"
+                name="research_system_prompt"
+                class="system-prompt-editor"
+              >{{ research_system_prompt }}</textarea>
+
+              <label class="editor-label" for="draft_system_prompt">Draft generation system prompt</label>
+              <textarea
+                id="draft_system_prompt"
+                name="draft_system_prompt"
+                class="system-prompt-editor"
+              >{{ draft_system_prompt }}</textarea>
+
+              <label class="editor-label" for="compliance_system_prompt">Compliance system prompt</label>
+              <textarea
+                id="compliance_system_prompt"
+                name="compliance_system_prompt"
+                class="system-prompt-editor"
+              >{{ compliance_system_prompt }}</textarea>
+
+              <label class="editor-label" for="final_details_system_prompt">Final details system prompt</label>
+              <textarea
+                id="final_details_system_prompt"
+                name="final_details_system_prompt"
+                class="system-prompt-editor"
+              >{{ final_details_system_prompt }}</textarea>
             </div>
           </section>
         </section>
@@ -1754,6 +1805,8 @@ APP_TEMPLATE = r"""
       const completeMarkdownField = document.getElementById("complete_article_text");
       const completeRichEditor = document.getElementById("complete_article_editor");
       const completeToolbar = document.querySelector('[data-rich-toolbar="complete"]');
+      const systemPromptToggle = document.getElementById("toggle_system_prompts");
+      const systemPromptPanel = document.getElementById("system_prompts_panel");
 
       function syncTickerInputFromSelection(value) {
         if (!selectedTickerInput) {
@@ -1776,6 +1829,15 @@ APP_TEMPLATE = r"""
       tabButtons.forEach((button) => {
         button.addEventListener("click", () => setActiveTab(button.dataset.tab));
       });
+
+      if (systemPromptToggle && systemPromptPanel) {
+        systemPromptToggle.addEventListener("click", () => {
+          const isHidden = systemPromptPanel.hidden;
+          systemPromptPanel.hidden = !isHidden;
+          systemPromptToggle.textContent = isHidden ? "Hide system prompts" : "Edit system prompts";
+          systemPromptToggle.setAttribute("aria-expanded", isHidden ? "true" : "false");
+        });
+      }
 
       function buildBriefRow(name, placeholder, value = "") {
         const row = document.createElement("div");
@@ -2207,6 +2269,13 @@ def _blank_context(settings) -> dict[str, object]:
         "research_openrouter_model": settings.openrouter_model,
         "article_openrouter_model": settings.article_openrouter_model,
         "final_details_openrouter_model": settings.final_details_openrouter_model,
+        "research_system_prompt": read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
+        "draft_system_prompt": read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
+        "compliance_system_prompt": read_text_if_exists(settings.compliance_prompt_file, COMPLIANCE_PROMPT),
+        "final_details_system_prompt": read_text_if_exists(
+            settings.final_details_prompt_file,
+            FINAL_DETAILS_PASS_PROMPT,
+        ),
         "output_dir": str(settings.output_dir.resolve()),
         "llm_provider": settings.llm_provider,
         "article_generation_model": f"openrouter · {settings.article_openrouter_model}",
@@ -2539,6 +2608,21 @@ def _hydrate_context(settings, context: dict[str, object]) -> dict[str, object]:
     hydrated["final_details_openrouter_model"] = str(
         hydrated.get("final_details_openrouter_model", settings.final_details_openrouter_model)
     )
+    hydrated["research_system_prompt"] = str(
+        hydrated.get("research_system_prompt", read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT))
+    )
+    hydrated["draft_system_prompt"] = str(
+        hydrated.get("draft_system_prompt", read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT))
+    )
+    hydrated["compliance_system_prompt"] = str(
+        hydrated.get("compliance_system_prompt", read_text_if_exists(settings.compliance_prompt_file, COMPLIANCE_PROMPT))
+    )
+    hydrated["final_details_system_prompt"] = str(
+        hydrated.get(
+            "final_details_system_prompt",
+            read_text_if_exists(settings.final_details_prompt_file, FINAL_DETAILS_PASS_PROMPT),
+        )
+    )
     hydrated["status_message"] = str(hydrated.get("status_message", ""))
     hydrated["company_profile_section"] = _brief_section_view(
         hydrated["brief_sections"],
@@ -2583,6 +2667,22 @@ def create_app() -> Flask:
                     "final_details_openrouter_model",
                     settings.final_details_openrouter_model,
                 ),
+                "research_system_prompt": request.form.get(
+                    "research_system_prompt",
+                    read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
+                ),
+                "draft_system_prompt": request.form.get(
+                    "draft_system_prompt",
+                    read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
+                ),
+                "compliance_system_prompt": request.form.get(
+                    "compliance_system_prompt",
+                    read_text_if_exists(settings.compliance_prompt_file, COMPLIANCE_PROMPT),
+                ),
+                "final_details_system_prompt": request.form.get(
+                    "final_details_system_prompt",
+                    read_text_if_exists(settings.final_details_prompt_file, FINAL_DETAILS_PASS_PROMPT),
+                ),
             }
         )
         context["brief_sections"] = _brief_sections_for_view(brief_section_values)
@@ -2598,8 +2698,19 @@ def create_app() -> Flask:
                 research_model = str(context["research_openrouter_model"]).strip()
                 article_model = str(context["article_openrouter_model"]).strip()
                 final_details_model = str(context["final_details_openrouter_model"]).strip()
+                research_system_prompt = str(context["research_system_prompt"]).strip()
+                draft_system_prompt = str(context["draft_system_prompt"]).strip()
+                compliance_system_prompt = str(context["compliance_system_prompt"]).strip()
+                final_details_system_prompt = str(context["final_details_system_prompt"]).strip()
                 if not research_model or not article_model or not final_details_model:
                     raise ValueError("Enter a model for research, article generation, and final details.")
+                if (
+                    not research_system_prompt
+                    or not draft_system_prompt
+                    or not compliance_system_prompt
+                    or not final_details_system_prompt
+                ):
+                    raise ValueError("Enter a system prompt for research, draft generation, compliance, and final details.")
                 save_settings_values(
                     {
                         "LLM_PROVIDER": "openrouter",
@@ -2610,6 +2721,10 @@ def create_app() -> Flask:
                         "FINAL_DETAILS_OPENROUTER_MODEL": final_details_model,
                     }
                 )
+                write_text(settings.research_prompt_file, research_system_prompt + "\n")
+                write_text(settings.draft_prompt_file, draft_system_prompt + "\n")
+                write_text(settings.compliance_prompt_file, compliance_system_prompt + "\n")
+                write_text(settings.final_details_prompt_file, final_details_system_prompt + "\n")
                 settings = load_settings()
                 context.update(
                     {
@@ -2618,6 +2733,16 @@ def create_app() -> Flask:
                         "research_openrouter_model": settings.openrouter_model,
                         "article_openrouter_model": settings.article_openrouter_model,
                         "final_details_openrouter_model": settings.final_details_openrouter_model,
+                        "research_system_prompt": read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
+                        "draft_system_prompt": read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
+                        "compliance_system_prompt": read_text_if_exists(
+                            settings.compliance_prompt_file,
+                            COMPLIANCE_PROMPT,
+                        ),
+                        "final_details_system_prompt": read_text_if_exists(
+                            settings.final_details_prompt_file,
+                            FINAL_DETAILS_PASS_PROMPT,
+                        ),
                         "status_message": "Settings saved.",
                         "active_tab": "settings",
                     }

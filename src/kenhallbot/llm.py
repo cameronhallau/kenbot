@@ -146,6 +146,7 @@ class OpenAIClient:
         press_releases: list[dict[str, Any]],
         price_context: list[dict[str, Any]],
         article_summaries: list[dict[str, Any]],
+        system_prompt: str = RESEARCH_PROMPT,
     ) -> ResearchBrief:
         payload = {
             "fact_pack": fact_pack.to_dict(),
@@ -172,7 +173,7 @@ class OpenAIClient:
             ],
             "article_summaries": article_summaries,
         }
-        data = self._json_response(RESEARCH_PROMPT, payload)
+        data = self._json_response(system_prompt, payload)
         return ResearchBrief(
             ticker=fact_pack.ticker,
             likely_reason=data.get("likely_reason", ""),
@@ -187,9 +188,16 @@ class OpenAIClient:
             watch_items=data.get("watch_items", []),
         )
 
-    def draft_article(self, fact_pack: FactPack, research: ResearchBrief, style_notes: str, motley_rules: str) -> str:
+    def draft_article(
+        self,
+        fact_pack: FactPack,
+        research: ResearchBrief,
+        style_notes: str,
+        motley_rules: str,
+        draft_prompt: str = DRAFT_PROMPT,
+    ) -> str:
         prompt = self._compose_system_prompt(
-            DRAFT_PROMPT,
+            draft_prompt,
             WRITER_STYLE_PROMPT,
             MOTLEY_RULES_PROMPT,
             f"Writer house style:\n{style_notes}",
@@ -209,9 +217,10 @@ class OpenAIClient:
         extra_notes: str,
         style_notes: str,
         motley_rules: str,
+        draft_prompt: str = DRAFT_PROMPT,
     ) -> str:
         prompt = self._compose_system_prompt(
-            DRAFT_PROMPT,
+            draft_prompt,
             WRITER_STYLE_PROMPT,
             MOTLEY_RULES_PROMPT,
             f"Writer house style:\n{style_notes}",
@@ -281,22 +290,33 @@ class OpenAIClient:
         )
         return "\n".join(lines).strip()
 
-    def generate_article_from_prompt(self, prompt_text: str) -> str:
+    def generate_article_from_prompt(self, prompt_text: str, system_prompt: str = DRAFT_PROMPT) -> str:
         return self._message_response(
-            "Write the requested article and return only the finished markdown article.",
+            system_prompt,
             prompt_text,
         )
 
-    def final_details_pass(self, article: str, motley_rules: str) -> str:
+    def final_details_pass(
+        self,
+        article: str,
+        motley_rules: str,
+        system_prompt: str = FINAL_DETAILS_PASS_PROMPT,
+    ) -> str:
         prompt = self._compose_system_prompt(
-            FINAL_DETAILS_PASS_PROMPT,
+            system_prompt,
             f"Technical and compliance specification:\n{motley_rules}",
         )
         return self._message_response(prompt, article)
 
-    def check_compliance(self, article: str, style_notes: str, motley_rules: str) -> ComplianceReport:
+    def check_compliance(
+        self,
+        article: str,
+        style_notes: str,
+        motley_rules: str,
+        system_prompt: str = COMPLIANCE_PROMPT,
+    ) -> ComplianceReport:
         prompt = self._compose_system_prompt(
-            COMPLIANCE_PROMPT,
+            system_prompt,
             f"Writer house style:\n{style_notes}",
             f"Publisher rules:\n{motley_rules}",
         )
