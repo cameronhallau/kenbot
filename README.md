@@ -1,5 +1,7 @@
 # KenHallBot
 
+For a Windows-focused setup guide written for a non-technical user, see [WINDOWS_DEPLOYMENT.md](/home/cam/Documents/Github/KenHallBot/WINDOWS_DEPLOYMENT.md).
+
 A lean Python pipeline for:
 
 - identifying major stock moves
