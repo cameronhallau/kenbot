@@ -85,7 +85,6 @@ class Settings:
     motley_rules_file: Path
     research_prompt_file: Path
     draft_prompt_file: Path
-    compliance_prompt_file: Path
     final_details_prompt_file: Path
 
 
@@ -113,7 +112,6 @@ def load_settings() -> Settings:
         motley_rules_file=Path(os.getenv("MOTLEY_RULES_FILE", "config/motley_rules_uk.md")),
         research_prompt_file=Path(os.getenv("RESEARCH_PROMPT_FILE", "config/research_system_prompt.md")),
         draft_prompt_file=Path(os.getenv("DRAFT_PROMPT_FILE", "config/draft_system_prompt.md")),
-        compliance_prompt_file=Path(os.getenv("COMPLIANCE_PROMPT_FILE", "config/compliance_system_prompt.md")),
         final_details_prompt_file=Path(
             os.getenv("FINAL_DETAILS_PROMPT_FILE", "config/final_details_system_prompt.md")
         ),

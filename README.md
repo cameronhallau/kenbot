@@ -80,7 +80,7 @@ There you can:
 
 - add or update your API keys
 - choose the underlying models used for research, article generation, and final details
-- edit the system prompts used at each stage
+- edit the system prompts used for research, article generation, and final details
 
 If you need to work with the underlying files directly, the app stores its supporting configuration in `config/`.
 

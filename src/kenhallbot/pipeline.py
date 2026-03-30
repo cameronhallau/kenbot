@@ -5,7 +5,7 @@ from .finance import FMPClient
 from .io_utils import ensure_directory, read_text_if_exists, write_json, write_text
 from .llm import OpenAIClient
 from .models import ComplianceReport, FactPack, MoverCandidate, ResearchBrief
-from .prompts import COMPLIANCE_PROMPT, DRAFT_PROMPT, FINAL_DETAILS_PASS_PROMPT, RESEARCH_PROMPT
+from .prompts import DRAFT_PROMPT, FINAL_DETAILS_PASS_PROMPT, RESEARCH_PROMPT
 
 DEFAULT_STYLE_NOTES = """
 - Write like a punchy private investor-columnist, not an analyst note
@@ -70,9 +70,6 @@ class Pipeline:
 
     def _draft_system_prompt(self) -> str:
         return read_text_if_exists(self.settings.draft_prompt_file, DRAFT_PROMPT)
-
-    def _compliance_system_prompt(self) -> str:
-        return read_text_if_exists(self.settings.compliance_prompt_file, COMPLIANCE_PROMPT)
 
     def _final_details_system_prompt(self) -> str:
         return read_text_if_exists(self.settings.final_details_prompt_file, FINAL_DETAILS_PASS_PROMPT)
@@ -175,7 +172,6 @@ class Pipeline:
             article,
             self._style_notes(style_notes),
             self._motley_rules(motley_rules),
-            system_prompt=self._compliance_system_prompt(),
         )
         write_json(self.settings.output_dir / f"{ticker}_compliance.json", report.to_dict())
         return report

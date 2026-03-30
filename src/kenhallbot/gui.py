@@ -8,7 +8,7 @@ from .config import load_settings, save_settings_values
 from .io_utils import read_text_if_exists, write_text
 from .models import FactPack, PricePerformance, ResearchBrief, StandardStats
 from .pipeline import DEFAULT_MOTLEY_RULES, DEFAULT_STYLE_NOTES, Pipeline
-from .prompts import COMPLIANCE_PROMPT, DRAFT_PROMPT, FINAL_DETAILS_PASS_PROMPT, RESEARCH_PROMPT
+from .prompts import DRAFT_PROMPT, FINAL_DETAILS_PASS_PROMPT, RESEARCH_PROMPT
 
 
 BRIEF_SECTION_DEFS = (
@@ -1763,7 +1763,7 @@ APP_TEMPLATE = r"""
               >
                 Edit system prompts
               </button>
-              <div class="hint">Show the editable system prompts used for research, draft generation, compliance, and final details.</div>
+              <div class="hint">Show the editable system prompts used for research, draft generation, and final details.</div>
             </div>
 
             <div id="style_rules_panel" hidden>
@@ -1804,13 +1804,6 @@ APP_TEMPLATE = r"""
                 name="draft_system_prompt"
                 class="system-prompt-editor"
               >{{ draft_system_prompt }}</textarea>
-
-              <label class="editor-label" for="compliance_system_prompt">Compliance system prompt</label>
-              <textarea
-                id="compliance_system_prompt"
-                name="compliance_system_prompt"
-                class="system-prompt-editor"
-              >{{ compliance_system_prompt }}</textarea>
 
               <label class="editor-label" for="final_details_system_prompt">Final details system prompt</label>
               <textarea
@@ -2310,7 +2303,6 @@ def _blank_context(settings) -> dict[str, object]:
         "motley_rules_text": read_text_if_exists(settings.motley_rules_file, DEFAULT_MOTLEY_RULES),
         "research_system_prompt": read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
         "draft_system_prompt": read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
-        "compliance_system_prompt": read_text_if_exists(settings.compliance_prompt_file, COMPLIANCE_PROMPT),
         "final_details_system_prompt": read_text_if_exists(
             settings.final_details_prompt_file,
             FINAL_DETAILS_PASS_PROMPT,
@@ -2659,9 +2651,6 @@ def _hydrate_context(settings, context: dict[str, object]) -> dict[str, object]:
     hydrated["draft_system_prompt"] = str(
         hydrated.get("draft_system_prompt", read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT))
     )
-    hydrated["compliance_system_prompt"] = str(
-        hydrated.get("compliance_system_prompt", read_text_if_exists(settings.compliance_prompt_file, COMPLIANCE_PROMPT))
-    )
     hydrated["final_details_system_prompt"] = str(
         hydrated.get(
             "final_details_system_prompt",
@@ -2728,10 +2717,6 @@ def create_app() -> Flask:
                     "draft_system_prompt",
                     read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
                 ),
-                "compliance_system_prompt": request.form.get(
-                    "compliance_system_prompt",
-                    read_text_if_exists(settings.compliance_prompt_file, COMPLIANCE_PROMPT),
-                ),
                 "final_details_system_prompt": request.form.get(
                     "final_details_system_prompt",
                     read_text_if_exists(settings.final_details_prompt_file, FINAL_DETAILS_PASS_PROMPT),
@@ -2755,19 +2740,13 @@ def create_app() -> Flask:
                 motley_rules_text = str(context["motley_rules_text"]).strip()
                 research_system_prompt = str(context["research_system_prompt"]).strip()
                 draft_system_prompt = str(context["draft_system_prompt"]).strip()
-                compliance_system_prompt = str(context["compliance_system_prompt"]).strip()
                 final_details_system_prompt = str(context["final_details_system_prompt"]).strip()
                 if not research_model or not article_model or not final_details_model:
                     raise ValueError("Enter a model for research, article generation, and final details.")
                 if not style_notes_text or not motley_rules_text:
                     raise ValueError("Enter the author style guidance and the technical/compliance rules.")
-                if (
-                    not research_system_prompt
-                    or not draft_system_prompt
-                    or not compliance_system_prompt
-                    or not final_details_system_prompt
-                ):
-                    raise ValueError("Enter a system prompt for research, draft generation, compliance, and final details.")
+                if not research_system_prompt or not draft_system_prompt or not final_details_system_prompt:
+                    raise ValueError("Enter a system prompt for research, draft generation, and final details.")
                 save_settings_values(
                     {
                         "LLM_PROVIDER": "openrouter",
@@ -2782,7 +2761,6 @@ def create_app() -> Flask:
                 write_text(settings.motley_rules_file, motley_rules_text + "\n")
                 write_text(settings.research_prompt_file, research_system_prompt + "\n")
                 write_text(settings.draft_prompt_file, draft_system_prompt + "\n")
-                write_text(settings.compliance_prompt_file, compliance_system_prompt + "\n")
                 write_text(settings.final_details_prompt_file, final_details_system_prompt + "\n")
                 settings = load_settings()
                 context.update(
@@ -2796,10 +2774,6 @@ def create_app() -> Flask:
                         "motley_rules_text": read_text_if_exists(settings.motley_rules_file, DEFAULT_MOTLEY_RULES),
                         "research_system_prompt": read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
                         "draft_system_prompt": read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
-                        "compliance_system_prompt": read_text_if_exists(
-                            settings.compliance_prompt_file,
-                            COMPLIANCE_PROMPT,
-                        ),
                         "final_details_system_prompt": read_text_if_exists(
                             settings.final_details_prompt_file,
                             FINAL_DETAILS_PASS_PROMPT,

@@ -313,10 +313,9 @@ class OpenAIClient:
         article: str,
         style_notes: str,
         motley_rules: str,
-        system_prompt: str = COMPLIANCE_PROMPT,
     ) -> ComplianceReport:
         prompt = self._compose_system_prompt(
-            system_prompt,
+            COMPLIANCE_PROMPT,
             f"Writer house style:\n{style_notes}",
             f"Publisher rules:\n{motley_rules}",
         )
