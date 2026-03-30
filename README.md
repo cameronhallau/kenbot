@@ -8,7 +8,7 @@ A lean Python pipeline for:
 - pulling a standard fact pack
 - researching likely qualitative reasons
 - drafting an article in your style
-- checking output against Motley Fool UK-style rules
+- checking output against your editorial rules
 
 ## What it does
 
@@ -44,7 +44,6 @@ Optional environment variables:
 - `FMP_BASE_URL`
 - `OUTPUT_DIR`
 - `STYLE_NOTES_FILE`
-- `MOTLEY_RULES_FILE`
 
 ## Install
 
@@ -145,7 +144,7 @@ Generated files are written to `output/` by default:
 Edit these files:
 
 - `config/style_notes.md`
-- `config/motley_rules_uk.md`
+- the rules file in `config/`
 
 The pipeline loads them automatically for draft and compliance stages.
 
