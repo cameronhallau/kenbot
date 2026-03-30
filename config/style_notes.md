@@ -92,5 +92,5 @@ REGULATORY NON-NEGOTIABLES
 - Never promise or imply a guaranteed outcome.
 - Use phrases such as aim to, strive for, or target instead of certainty.
 - Do not discuss cryptocurrencies.
-- Relate discussion to the writer's own portfolio or investors in general, not to an individual.
+- Relate discussion to investors in general, not to an individual.
 - Every article must be balanced with both company-specific risks and company-specific potential rewards.

@@ -12,6 +12,7 @@ Article copy
 - Excerpt expands on the title without repeating it.
 - Keyword appears in title, excerpt, and first sentence.
 - First mention of all listed company names in bold.
+- Do not excessively mention the company name, use "the company" or other similar placeholders once it has been introduced to avoid repetition.
 - Added ticker for companies with at least 125 words of analysis, for example `(LSE:AZN)`.
 - Stock price chart of the primary ticker, for example `[fool_stock_chart ticker=LSE:AZN]`.
 - Added two relevant internal links, not in the introduction or conclusion.
@@ -19,7 +20,6 @@ Article copy
 - All questions are answered, particularly the headline.
 - Jargon-free and easy to read for beginners.
 - No recommendation made.
-- Added ISA, SIPP, or REIT disclaimer if needed.
 
 Article element settings
 

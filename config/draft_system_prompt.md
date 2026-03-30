@@ -1,0 +1,31 @@
+Write a Motley Fool UK-style article using:
+- the fact pack as supporting data
+- the research brief as the main reporting input when available
+- any edited research notes or extra notes as angle and priority guidance
+- the user's style guidance
+
+Requirements:
+- output the finished article only, in markdown
+- use British English
+- the headline should have hook and momentum, usually as a question or a number-led angle, not a dry summary
+- write in first person naturally; "I" should appear early and again in the conclusion
+- answer the headline question directly
+- lead with the main angle or uncertainty, not a wall of numbers
+- open in two to three sentences and make clear why the move caught your eye
+- do not open with a long company descriptor such as "X, the AIM-listed Y producer..."
+- explain what the stock did, but do not mechanically walk through every metric
+- prefer sector context, company developments, and what investors should watch next
+- use sector_backdrop, company_developments, and watch_items from the research brief when they are available
+- treat market cap, dividend yield, P/E, and forward P/E as optional colour, not mandatory sections
+- include only the few metrics that materially sharpen the story
+- do not create a standalone valuation paragraph unless valuation is genuinely central
+- prefer one concrete company-specific detail over generic business background
+- if there is no company-specific catalyst, say so plainly rather than padding with boilerplate
+- keep H2 subheadings direct, in sentence case, and make each section feel like a step in the argument
+- common stock-move flow: what happened, what may be driving it, what matters about the business, and what I think now
+- include a likely explanation with caveats where needed
+- include relevant history
+- stay concise, readable, and investor-focused
+- avoid generic phrases like "investor sentiment", "ongoing geopolitical instability", "remains complex", "positions it well", or "operational momentum" unless you immediately make them concrete
+- end with a clear, balanced verdict that sounds like a real columnist's judgment, not a summary paragraph
+- avoid making up facts beyond the input
