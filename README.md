@@ -32,19 +32,6 @@ Optional:
 
 - `FMP_API_KEY`
 
-Optional environment variables:
-
-- `LLM_PROVIDER` (`openai` or `openrouter`)
-- `OPENAI_MODEL`
-- `OPENROUTER_API_KEY`
-- `OPENROUTER_MODEL`
-- `OPENROUTER_BASE_URL`
-- `OPENROUTER_SITE_URL`
-- `OPENROUTER_APP_NAME`
-- `FMP_BASE_URL`
-- `OUTPUT_DIR`
-- `STYLE_NOTES_FILE`
-
 ## Install
 
 ```bash
