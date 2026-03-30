@@ -10,19 +10,6 @@ A lean Python pipeline for:
 - drafting an article in your style
 - checking output against your editorial rules
 
-## What it does
-
-The app helps you:
-
-- scan a watchlist for notable movers
-- scan the London market directly for UK movers
-- build a reusable metrics pack for a ticker
-- research recent qualitative catalysts and history with LLM synthesis
-- draft an article from facts + research
-- run a final compliance/style review
-- run the full flow end-to-end
-- launch a simple local GUI
-
 ## Requirements
 
 - Python 3.11+
@@ -70,13 +57,3 @@ There you can:
 - edit the system prompts used for research, article generation, and final details
 
 If you need to work with the underlying files directly, the app stores its supporting configuration in `config/`.
-
-## Notes
-
-- This tool is designed for human-in-the-loop publishing.
-- It does not auto-publish articles.
-- It separates factual retrieval from LLM synthesis to reduce hallucination risk.
-- UK market scans use a free scrape of public UK mover pages and return the top 3 names by 1-day move.
-- Fact packs can fall back to scraped mover metadata when finance API endpoints are unavailable.
-- UK market workflows default to the top 3 movers to keep the process focused and API usage efficient.
-- OpenRouter is supported through its OpenAI-compatible API base.
