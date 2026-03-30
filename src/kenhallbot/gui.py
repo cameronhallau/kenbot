@@ -7,7 +7,7 @@ from flask import Flask, render_template_string, request
 from .config import load_settings, save_settings_values
 from .io_utils import read_text_if_exists, write_text
 from .models import FactPack, PricePerformance, ResearchBrief, StandardStats
-from .pipeline import Pipeline
+from .pipeline import DEFAULT_MOTLEY_RULES, DEFAULT_STYLE_NOTES, Pipeline
 from .prompts import COMPLIANCE_PROMPT, DRAFT_PROMPT, FINAL_DETAILS_PASS_PROMPT, RESEARCH_PROMPT
 
 
@@ -1747,6 +1747,15 @@ APP_TEMPLATE = r"""
               <button type="submit" name="action" value="save_settings">Save settings</button>
               <button
                 type="button"
+                id="toggle_style_rules"
+                class="secondary"
+                aria-expanded="false"
+                aria-controls="style_rules_panel"
+              >
+                Edit style and rules
+              </button>
+              <button
+                type="button"
                 id="toggle_system_prompts"
                 class="secondary"
                 aria-expanded="false"
@@ -1755,6 +1764,26 @@ APP_TEMPLATE = r"""
                 Edit system prompts
               </button>
               <div class="hint">Show the editable system prompts used for research, draft generation, compliance, and final details.</div>
+            </div>
+
+            <div id="style_rules_panel" hidden>
+              <div class="button-row">
+                <div class="hint">These are the author voice guidance and the technical/compliance rules used during generation and review.</div>
+              </div>
+
+              <label class="editor-label" for="style_notes_text">Author style guidance</label>
+              <textarea
+                id="style_notes_text"
+                name="style_notes_text"
+                class="system-prompt-editor"
+              >{{ style_notes_text }}</textarea>
+
+              <label class="editor-label" for="motley_rules_text">Technical writing, house style, and compliance rules</label>
+              <textarea
+                id="motley_rules_text"
+                name="motley_rules_text"
+                class="system-prompt-editor"
+              >{{ motley_rules_text }}</textarea>
             </div>
 
             <div id="system_prompts_panel" hidden>
@@ -1805,6 +1834,8 @@ APP_TEMPLATE = r"""
       const completeMarkdownField = document.getElementById("complete_article_text");
       const completeRichEditor = document.getElementById("complete_article_editor");
       const completeToolbar = document.querySelector('[data-rich-toolbar="complete"]');
+      const styleRulesToggle = document.getElementById("toggle_style_rules");
+      const styleRulesPanel = document.getElementById("style_rules_panel");
       const systemPromptToggle = document.getElementById("toggle_system_prompts");
       const systemPromptPanel = document.getElementById("system_prompts_panel");
 
@@ -1830,14 +1861,20 @@ APP_TEMPLATE = r"""
         button.addEventListener("click", () => setActiveTab(button.dataset.tab));
       });
 
-      if (systemPromptToggle && systemPromptPanel) {
-        systemPromptToggle.addEventListener("click", () => {
-          const isHidden = systemPromptPanel.hidden;
-          systemPromptPanel.hidden = !isHidden;
-          systemPromptToggle.textContent = isHidden ? "Hide system prompts" : "Edit system prompts";
-          systemPromptToggle.setAttribute("aria-expanded", isHidden ? "true" : "false");
+      function bindToggle(button, panel, openLabel, closedLabel) {
+        if (!button || !panel) {
+          return;
+        }
+        button.addEventListener("click", () => {
+          const isHidden = panel.hidden;
+          panel.hidden = !isHidden;
+          button.textContent = isHidden ? openLabel : closedLabel;
+          button.setAttribute("aria-expanded", isHidden ? "true" : "false");
         });
       }
+
+      bindToggle(styleRulesToggle, styleRulesPanel, "Hide style and rules", "Edit style and rules");
+      bindToggle(systemPromptToggle, systemPromptPanel, "Hide system prompts", "Edit system prompts");
 
       function buildBriefRow(name, placeholder, value = "") {
         const row = document.createElement("div");
@@ -2269,6 +2306,8 @@ def _blank_context(settings) -> dict[str, object]:
         "research_openrouter_model": settings.openrouter_model,
         "article_openrouter_model": settings.article_openrouter_model,
         "final_details_openrouter_model": settings.final_details_openrouter_model,
+        "style_notes_text": read_text_if_exists(settings.style_notes_file, DEFAULT_STYLE_NOTES),
+        "motley_rules_text": read_text_if_exists(settings.motley_rules_file, DEFAULT_MOTLEY_RULES),
         "research_system_prompt": read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
         "draft_system_prompt": read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
         "compliance_system_prompt": read_text_if_exists(settings.compliance_prompt_file, COMPLIANCE_PROMPT),
@@ -2608,6 +2647,12 @@ def _hydrate_context(settings, context: dict[str, object]) -> dict[str, object]:
     hydrated["final_details_openrouter_model"] = str(
         hydrated.get("final_details_openrouter_model", settings.final_details_openrouter_model)
     )
+    hydrated["style_notes_text"] = str(
+        hydrated.get("style_notes_text", read_text_if_exists(settings.style_notes_file, DEFAULT_STYLE_NOTES))
+    )
+    hydrated["motley_rules_text"] = str(
+        hydrated.get("motley_rules_text", read_text_if_exists(settings.motley_rules_file, DEFAULT_MOTLEY_RULES))
+    )
     hydrated["research_system_prompt"] = str(
         hydrated.get("research_system_prompt", read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT))
     )
@@ -2667,6 +2712,14 @@ def create_app() -> Flask:
                     "final_details_openrouter_model",
                     settings.final_details_openrouter_model,
                 ),
+                "style_notes_text": request.form.get(
+                    "style_notes_text",
+                    read_text_if_exists(settings.style_notes_file, DEFAULT_STYLE_NOTES),
+                ),
+                "motley_rules_text": request.form.get(
+                    "motley_rules_text",
+                    read_text_if_exists(settings.motley_rules_file, DEFAULT_MOTLEY_RULES),
+                ),
                 "research_system_prompt": request.form.get(
                     "research_system_prompt",
                     read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
@@ -2698,12 +2751,16 @@ def create_app() -> Flask:
                 research_model = str(context["research_openrouter_model"]).strip()
                 article_model = str(context["article_openrouter_model"]).strip()
                 final_details_model = str(context["final_details_openrouter_model"]).strip()
+                style_notes_text = str(context["style_notes_text"]).strip()
+                motley_rules_text = str(context["motley_rules_text"]).strip()
                 research_system_prompt = str(context["research_system_prompt"]).strip()
                 draft_system_prompt = str(context["draft_system_prompt"]).strip()
                 compliance_system_prompt = str(context["compliance_system_prompt"]).strip()
                 final_details_system_prompt = str(context["final_details_system_prompt"]).strip()
                 if not research_model or not article_model or not final_details_model:
                     raise ValueError("Enter a model for research, article generation, and final details.")
+                if not style_notes_text or not motley_rules_text:
+                    raise ValueError("Enter the author style guidance and the technical/compliance rules.")
                 if (
                     not research_system_prompt
                     or not draft_system_prompt
@@ -2721,6 +2778,8 @@ def create_app() -> Flask:
                         "FINAL_DETAILS_OPENROUTER_MODEL": final_details_model,
                     }
                 )
+                write_text(settings.style_notes_file, style_notes_text + "\n")
+                write_text(settings.motley_rules_file, motley_rules_text + "\n")
                 write_text(settings.research_prompt_file, research_system_prompt + "\n")
                 write_text(settings.draft_prompt_file, draft_system_prompt + "\n")
                 write_text(settings.compliance_prompt_file, compliance_system_prompt + "\n")
@@ -2733,6 +2792,8 @@ def create_app() -> Flask:
                         "research_openrouter_model": settings.openrouter_model,
                         "article_openrouter_model": settings.article_openrouter_model,
                         "final_details_openrouter_model": settings.final_details_openrouter_model,
+                        "style_notes_text": read_text_if_exists(settings.style_notes_file, DEFAULT_STYLE_NOTES),
+                        "motley_rules_text": read_text_if_exists(settings.motley_rules_file, DEFAULT_MOTLEY_RULES),
                         "research_system_prompt": read_text_if_exists(settings.research_prompt_file, RESEARCH_PROMPT),
                         "draft_system_prompt": read_text_if_exists(settings.draft_prompt_file, DRAFT_PROMPT),
                         "compliance_system_prompt": read_text_if_exists(
