@@ -1697,6 +1697,17 @@ APP_TEMPLATE = r"""
                 >
               </div>
               <div class="field">
+                <label for="fmp_api_key">FMP API key</label>
+                <input
+                  id="fmp_api_key"
+                  name="fmp_api_key"
+                  type="password"
+                  value="{{ fmp_api_key }}"
+                  placeholder="Enter your FMP key"
+                  autocomplete="off"
+                >
+              </div>
+              <div class="field">
                 <label for="research_openrouter_model">Research model</label>
                 <input
                   id="research_openrouter_model"
@@ -2192,6 +2203,7 @@ def _blank_context(settings) -> dict[str, object]:
         "limit": "3",
         "active_tab": "research",
         "openrouter_api_key": settings.openrouter_api_key,
+        "fmp_api_key": settings.fmp_api_key,
         "research_openrouter_model": settings.openrouter_model,
         "article_openrouter_model": settings.article_openrouter_model,
         "final_details_openrouter_model": settings.final_details_openrouter_model,
@@ -2521,6 +2533,7 @@ def _hydrate_context(settings, context: dict[str, object]) -> dict[str, object]:
     hydrated["llm_provider"] = settings.llm_provider
     hydrated["article_generation_model"] = f"openrouter · {settings.article_openrouter_model}"
     hydrated["openrouter_api_key"] = str(hydrated.get("openrouter_api_key", settings.openrouter_api_key))
+    hydrated["fmp_api_key"] = str(hydrated.get("fmp_api_key", settings.fmp_api_key))
     hydrated["research_openrouter_model"] = str(hydrated.get("research_openrouter_model", settings.openrouter_model))
     hydrated["article_openrouter_model"] = str(hydrated.get("article_openrouter_model", settings.article_openrouter_model))
     hydrated["final_details_openrouter_model"] = str(
@@ -2563,6 +2576,7 @@ def create_app() -> Flask:
                 "limit": request.form.get("limit", "3"),
                 "active_tab": request.form.get("active_tab", "research"),
                 "openrouter_api_key": request.form.get("openrouter_api_key", settings.openrouter_api_key),
+                "fmp_api_key": request.form.get("fmp_api_key", settings.fmp_api_key),
                 "research_openrouter_model": request.form.get("research_openrouter_model", settings.openrouter_model),
                 "article_openrouter_model": request.form.get("article_openrouter_model", settings.article_openrouter_model),
                 "final_details_openrouter_model": request.form.get(
@@ -2580,6 +2594,7 @@ def create_app() -> Flask:
 
             if action == "save_settings":
                 openrouter_api_key = str(context["openrouter_api_key"]).strip()
+                fmp_api_key = str(context["fmp_api_key"]).strip()
                 research_model = str(context["research_openrouter_model"]).strip()
                 article_model = str(context["article_openrouter_model"]).strip()
                 final_details_model = str(context["final_details_openrouter_model"]).strip()
@@ -2589,6 +2604,7 @@ def create_app() -> Flask:
                     {
                         "LLM_PROVIDER": "openrouter",
                         "OPENROUTER_API_KEY": openrouter_api_key,
+                        "FMP_API_KEY": fmp_api_key,
                         "OPENROUTER_MODEL": research_model,
                         "ARTICLE_OPENROUTER_MODEL": article_model,
                         "FINAL_DETAILS_OPENROUTER_MODEL": final_details_model,
@@ -2598,6 +2614,7 @@ def create_app() -> Flask:
                 context.update(
                     {
                         "openrouter_api_key": settings.openrouter_api_key,
+                        "fmp_api_key": settings.fmp_api_key,
                         "research_openrouter_model": settings.openrouter_model,
                         "article_openrouter_model": settings.article_openrouter_model,
                         "final_details_openrouter_model": settings.final_details_openrouter_model,
