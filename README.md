@@ -1,4 +1,4 @@
-# KenHallBot
+# kenbot
 
 For a Windows-focused setup guide written for a non-technical user, see [WINDOWS_DEPLOYMENT.md](/home/cam/Documents/Github/KenHallBot/WINDOWS_DEPLOYMENT.md).
 
