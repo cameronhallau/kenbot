@@ -2,11 +2,11 @@
 
 KenHallBot is a local browser app for researching big UK stock moves and drafting an article from that research.
 
-If you are using Windows and you are not technical, start here. You only use `Command Prompt` to start the app. The actual app opens in your web browser.
+If you are using a Mac and you are not technical, start here. You only use `Terminal` to start the app. The actual app opens in your web browser.
 
 ## What you need before you start
 
-- A Windows computer
+- A Mac
 - An internet connection
 - Python `3.11` or newer
 - An `OpenRouter` API key
@@ -20,37 +20,42 @@ You will add the API keys inside the app later.
 2. Go to [github.com/cameronhallau/kenbot](https://github.com/cameronhallau/kenbot).
 3. Click the green `Code` button.
 4. Click `Download ZIP`.
-5. When the ZIP file finishes downloading, right-click it and choose `Extract All`.
+5. When the ZIP file finishes downloading, open it to unzip it.
 6. Move the extracted folder somewhere easy to find.
 
 A simple choice is:
 
 ```text
-C:\KenHallBot
+/Users/yourname/KenHallBot
 ```
 
-If Windows extracts it as something like `kenbot-main`, that is fine too. Just remember the folder name you end up with.
+If your Mac saves it as something like `kenbot-main`, that is fine too. Just remember the folder name you end up with.
 
 ## Step 2: Install Python
 
-1. Go to [python.org/downloads/windows](https://www.python.org/downloads/windows/).
+1. Go to [python.org/downloads/macos](https://www.python.org/downloads/macos/).
 2. Download Python `3.11` or newer.
 3. Run the installer.
-4. Tick `Add Python to PATH`.
-5. Click `Install Now`.
+4. Follow the installer steps to finish the install.
 
-## Step 3: Open Command Prompt
+## Step 3: Open Terminal
 
-1. Press the `Windows` key.
-2. Type `cmd`.
-3. Open `Command Prompt`.
+1. Press `Command` + `Space`.
+2. Type `Terminal`.
+3. Open `Terminal`.
 
 ## Step 4: Go into the project folder
 
-If your folder is `C:\KenHallBot`, type this and press `Enter`:
+If your folder is `KenHallBot` in your home folder, type this and press `Enter`:
 
-```bat
-cd /d C:\KenHallBot
+```bash
+cd ~/KenHallBot
+```
+
+If your folder is still in `Downloads` and is called `kenbot-main`, use:
+
+```bash
+cd ~/Downloads/kenbot-main
 ```
 
 If your folder has a different name or location, use that path instead.
@@ -59,33 +64,27 @@ If your folder has a different name or location, use that path instead.
 
 Run these commands one at a time:
 
-```bat
-py -3.11 -m venv .venv
-.venv\Scripts\activate
-python -m pip install --upgrade pip
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
 pip install -e .
-```
-
-If the first command does not work, try this instead:
-
-```bat
-py -3 -m venv .venv
 ```
 
 This setup step is usually only needed once.
 
 ## Step 6: Start the app
 
-Still in the same `Command Prompt` window, run:
+Still in the same `Terminal` window, run:
 
-```bat
+```bash
 kenhallbot-gui
 ```
 
 If that does not work, use:
 
-```bat
-python -m kenhallbot.gui
+```bash
+python3 -m kenhallbot.gui
 ```
 
 Leave that window open while you use KenHallBot.
@@ -121,9 +120,9 @@ The main tabs are:
 
 After the first setup, you usually only need these commands:
 
-```bat
-cd /d C:\KenHallBot
-.venv\Scripts\activate
+```bash
+cd ~/KenHallBot
+source .venv/bin/activate
 kenhallbot-gui
 ```
 
@@ -133,11 +132,11 @@ Then open:
 http://127.0.0.1:5000
 ```
 
-If your folder is not `C:\KenHallBot`, use your own path. If `kenhallbot-gui` does not work, use `python -m kenhallbot.gui`.
+If your folder is not `~/KenHallBot`, use your own path. If `kenhallbot-gui` does not work, use `python3 -m kenhallbot.gui`.
 
 ## How to stop the app
 
-1. Click the `Command Prompt` window where KenHallBot is running.
+1. Click the `Terminal` window where KenHallBot is running.
 2. Press `Ctrl` + `C`.
 
 ## Where your files are saved
@@ -146,19 +145,19 @@ KenHallBot saves generated files in the `output` folder inside the project folde
 
 ## Troubleshooting
 
-### `'py' is not recognized`
+### `python3: command not found`
 
-Python is either not installed, or it was installed without `Add Python to PATH`.
+Python is either not installed, or the installation did not finish properly.
 
 Fix:
 
 1. Run the Python installer again.
-2. Tick `Add Python to PATH`.
-3. Try the setup steps again.
+2. Finish the install.
+3. Open a new `Terminal` window and try again.
 
 ### The browser page will not open
 
-Make sure the app is still running in `Command Prompt`, then open:
+Make sure the app is still running in `Terminal`, then open:
 
 ```text
 http://127.0.0.1:5000
@@ -168,8 +167,8 @@ http://127.0.0.1:5000
 
 Use this instead:
 
-```bat
-python -m kenhallbot.gui
+```bash
+python3 -m kenhallbot.gui
 ```
 
 ## Technical quick start
@@ -177,8 +176,9 @@ python -m kenhallbot.gui
 If you already know your way around Python, the short version is:
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
+python3 -m pip install --upgrade pip
 pip install -e .
 kenhallbot-gui
 ```
