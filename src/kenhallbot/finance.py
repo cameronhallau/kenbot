@@ -43,11 +43,8 @@ class FMPClient:
         except Exception:
             return None
 
-    def _load_simplywall_market_page(self, path: str) -> list[dict[str, Any]]:
-        url = f"{self.simplywall_base_url.rstrip('/')}/stocks/gb/{path.lstrip('/')}"
-        response = httpx.get(url, timeout=self.timeout, follow_redirects=True)
-        response.raise_for_status()
-        match = re.search(r'window\["__RQ_R_db_"\]\.push\((\{.*?\})\);</script>', response.text)
+    def _extract_simplywall_market_payload(self, html: str, url: str) -> dict[str, Any]:
+        match = re.search(r'window\["__RQ_R_db_"\]\.push\((\{.*?\})\);</script>', html)
         if not match:
             raise FinanceAPIError(f"Could not parse Simply Wall St page: {url}")
         data = json.loads(match.group(1))
@@ -64,11 +61,46 @@ class FMPClient:
                 if isinstance(first_page, dict):
                     companies = first_page.get("companies")
                     if isinstance(companies, list):
-                        return companies
+                        return first_page
             companies = payload.get("companies")
             if isinstance(companies, list):
-                return companies
+                return {"companies": companies}
         raise FinanceAPIError(f"Could not locate company list in Simply Wall St page: {url}")
+
+    def _load_simplywall_market_page_payload(self, path: str, page: int = 1) -> dict[str, Any]:
+        separator = "&" if "?" in path else "?"
+        query = f"{separator}page={page}" if page > 1 else ""
+        url = f"{self.simplywall_base_url.rstrip('/')}/stocks/gb/{path.lstrip('/')}{query}"
+        return self._extract_simplywall_market_payload(self._fetch_page(url), url)
+
+    def _load_simplywall_market_page(self, path: str) -> list[dict[str, Any]]:
+        payload = self._load_simplywall_market_page_payload(path)
+        companies = payload.get("companies")
+        if isinstance(companies, list):
+            return companies
+        raise FinanceAPIError(f"Could not locate company list in Simply Wall St page: {path}")
+
+    def _load_all_simplywall_market_companies(self, path: str) -> list[dict[str, Any]]:
+        first_page = self._load_simplywall_market_page_payload(path, page=1)
+        companies = list(first_page.get("companies", []))
+        meta = first_page.get("meta", {})
+        total_pages = int(meta.get("totalPages") or 1)
+        for page in range(2, total_pages + 1):
+            payload = self._load_simplywall_market_page_payload(path, page=page)
+            companies.extend(payload.get("companies", []))
+        return companies
+
+    def _market_move_for_window(self, company: dict[str, Any], move_window: str) -> float | None:
+        mapping = {
+            "1D": "return1D",
+            "7D": "return7D",
+            "1Y": "return1YrAbs",
+        }
+        field = mapping.get(move_window, "return1D")
+        value = company.get(field)
+        if value is None:
+            return None
+        return value * 100
 
     def _normalise_simplywall_ticker(self, company: dict[str, Any]) -> str:
         unique_symbol = company.get("uniqueSymbol")
@@ -462,38 +494,38 @@ class FMPClient:
         min_price: float = 0.1,
         min_avg_volume: float = 50_000,
         limit: int = 3,
+        move_window: str = "1D",
     ) -> list[MoverCandidate]:
         candidates: list[MoverCandidate] = []
         seen: set[str] = set()
-        for path in ("top-gainers", "biggest-losers"):
-            for company in self._load_simplywall_market_page(path):
-                symbol = self._normalise_simplywall_ticker(company)
-                if symbol in seen:
-                    continue
-                seen.add(symbol)
+        for company in self._load_all_simplywall_market_companies("top-gainers"):
+            symbol = self._normalise_simplywall_ticker(company)
+            if symbol in seen:
+                continue
+            seen.add(symbol)
 
-                day_change = (company.get("return1D") or 0) * 100 if company.get("return1D") is not None else None
-                price = company.get("sharePrice")
+            move_pct = self._market_move_for_window(company, move_window)
+            price = company.get("sharePrice")
 
-                if day_change is None:
-                    continue
-                if min_abs_day_move and abs(day_change) < min_abs_day_move:
-                    continue
-                if price is not None and price < min_price:
-                    continue
+            if move_pct is None:
+                continue
+            if min_abs_day_move and abs(move_pct) < min_abs_day_move:
+                continue
+            if price is not None and price < min_price:
+                continue
 
-                score = round(abs(day_change), 2)
-                candidates.append(
-                    MoverCandidate(
-                        ticker=symbol,
-                        company_name=company.get("legalName") or company.get("shortName"),
-                        price=price,
-                        day_change_pct=round(day_change, 2),
-                        volume=None,
-                        avg_volume=None,
-                        score=score,
-                        raw_context=company,
-                    )
+            score = round(abs(move_pct), 2)
+            candidates.append(
+                MoverCandidate(
+                    ticker=symbol,
+                    company_name=company.get("legalName") or company.get("shortName"),
+                    price=price,
+                    day_change_pct=round(move_pct, 2),
+                    volume=None,
+                    avg_volume=None,
+                    score=score,
+                    raw_context=company,
                 )
+            )
 
         return sorted(candidates, key=lambda item: item.score, reverse=True)[:limit]

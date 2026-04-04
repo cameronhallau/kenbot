@@ -50,6 +50,17 @@ BRIEF_SECTION_DEFS = (
     },
 )
 
+MOVER_WINDOW_LABELS = {
+    "1D": "1-day",
+    "7D": "7-day",
+    "1Y": "1-year",
+}
+
+
+def _normalise_mover_window(value: str) -> str:
+    move_window = value.strip().upper()
+    return move_window if move_window in MOVER_WINDOW_LABELS else "1D"
+
 
 APP_TEMPLATE = r"""
 <!doctype html>
@@ -456,11 +467,13 @@ APP_TEMPLATE = r"""
       }
       input,
       textarea,
+      select,
       button {
         font: inherit;
       }
       input,
-      textarea {
+      textarea,
+      select {
         width: 100%;
         padding: 15px 16px;
         border: 1px solid transparent;
@@ -474,7 +487,8 @@ APP_TEMPLATE = r"""
         color: rgba(98, 115, 133, 0.82);
       }
       input:focus,
-      textarea:focus {
+      textarea:focus,
+      select:focus {
         outline: none;
         border-color: rgba(46, 91, 114, 0.18);
         box-shadow: var(--inset-shadow), var(--focus-ring);
@@ -1409,6 +1423,14 @@ APP_TEMPLATE = r"""
                     <label for="limit">Rows to scan</label>
                     <input id="limit" name="limit" type="number" min="1" step="1" value="{{ limit }}">
                   </div>
+                  <div class="field">
+                    <label for="mover_window">Move window</label>
+                    <select id="mover_window" name="mover_window">
+                      <option value="1D" {% if mover_window == '1D' %}selected{% endif %}>1 day</option>
+                      <option value="7D" {% if mover_window == '7D' %}selected{% endif %}>7 days</option>
+                      <option value="1Y" {% if mover_window == '1Y' %}selected{% endif %}>1 year</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div class="table-wrap">
@@ -1419,7 +1441,7 @@ APP_TEMPLATE = r"""
                         <th></th>
                         <th>Ticker</th>
                         <th>Company</th>
-                        <th>Move</th>
+                        <th>{{ mover_window_label }} move</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1465,7 +1487,7 @@ APP_TEMPLATE = r"""
                     <label for="selected_ticker_input"><strong>Ticker:</strong></label>
                     <input id="selected_ticker_input" name="selected_ticker" value="{{ selected_company_ticker or '' }}" placeholder="SHEL.L">
                   </div>
-                  <div><strong>Latest move:</strong> {{ selected_company_move or 'n/a' }}</div>
+                  <div><strong>{{ mover_window_label }} move:</strong> {{ selected_company_move or 'n/a' }}</div>
                 </div>
 
                 <div class="button-row">
@@ -2294,6 +2316,8 @@ def _blank_context(settings) -> dict[str, object]:
         "error": "",
         "status_message": "",
         "limit": "3",
+        "mover_window": "1D",
+        "mover_window_label": MOVER_WINDOW_LABELS["1D"],
         "active_tab": "research",
         "openrouter_api_key": settings.openrouter_api_key,
         "fmp_api_key": settings.fmp_api_key,
@@ -2605,6 +2629,8 @@ def _hydrate_context(settings, context: dict[str, object]) -> dict[str, object]:
 
     selected_ticker = _pick_ticker(hydrated)
     hydrated["selected_company_ticker"] = selected_ticker
+    hydrated["mover_window"] = _normalise_mover_window(str(hydrated.get("mover_window", "1D")))
+    hydrated["mover_window_label"] = MOVER_WINDOW_LABELS[hydrated["mover_window"]]
 
     fact_pack_json = str(hydrated.get("fact_pack_json", ""))
     if fact_pack_json:
@@ -2613,7 +2639,6 @@ def _hydrate_context(settings, context: dict[str, object]) -> dict[str, object]:
             fact_pack = _fact_pack_from_dict(fact_pack_dict)
             hydrated["selected_company_name"] = fact_pack.stats.company_name or fact_pack.ticker
             hydrated["selected_company_ticker"] = fact_pack.ticker
-            hydrated["selected_company_move"] = _format_percent(fact_pack.performance.day_change_pct)
 
     research_json = str(hydrated.get("research_json", ""))
     if research_json:
@@ -2693,6 +2718,7 @@ def create_app() -> Flask:
                 "article_text": request.form.get("article_text", ""),
                 "complete_article_text": request.form.get("complete_article_text", ""),
                 "limit": request.form.get("limit", "3"),
+                "mover_window": _normalise_mover_window(request.form.get("mover_window", "1D")),
                 "active_tab": request.form.get("active_tab", "research"),
                 "openrouter_api_key": request.form.get("openrouter_api_key", settings.openrouter_api_key),
                 "fmp_api_key": request.form.get("fmp_api_key", settings.fmp_api_key),
@@ -2788,6 +2814,7 @@ def create_app() -> Flask:
                 movers = pipeline.scan_uk_market(
                     min_abs_day_move=0.0,
                     limit=int(str(context["limit"])),
+                    move_window=str(context["mover_window"]),
                 )
                 context["movers_json"] = json.dumps([item.to_dict() for item in movers])
                 mover_tickers = {item.ticker for item in movers}

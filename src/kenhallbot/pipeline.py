@@ -85,12 +85,14 @@ class Pipeline:
         min_price: float = 0.1,
         min_avg_volume: float = 50_000,
         limit: int = 3,
+        move_window: str = "1D",
     ) -> list[MoverCandidate]:
         movers = self.finance.scan_uk_market(
             min_abs_day_move=min_abs_day_move,
             min_price=min_price,
             min_avg_volume=min_avg_volume,
             limit=limit,
+            move_window=move_window,
         )
         write_json(self.settings.output_dir / "movers.json", [item.to_dict() for item in movers])
         return movers
