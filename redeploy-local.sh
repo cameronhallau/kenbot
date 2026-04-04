@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_DIR="${HOME}/Documents/kenbot-main"
+
+if [[ ! -d "${REPO_DIR}" ]]; then
+  echo "Could not find ${REPO_DIR}"
+  exit 1
+fi
+
+cd "${REPO_DIR}"
 
 if [[ ! -d .git ]]; then
-  echo "This script must be run from the kenbot repository."
+  echo "${REPO_DIR} is not a git repository."
   exit 1
 fi
 
