@@ -51,7 +51,24 @@ class FMPClient:
         if not match:
             raise FinanceAPIError(f"Could not parse Simply Wall St page: {url}")
         data = json.loads(match.group(1))
-        return data["queries"][0]["state"]["data"]["pages"][0]["companies"]
+        for query in data.get("queries", []):
+            state = query.get("state")
+            if not isinstance(state, dict):
+                continue
+            payload = state.get("data")
+            if not isinstance(payload, dict):
+                continue
+            pages = payload.get("pages")
+            if isinstance(pages, list) and pages:
+                first_page = pages[0]
+                if isinstance(first_page, dict):
+                    companies = first_page.get("companies")
+                    if isinstance(companies, list):
+                        return companies
+            companies = payload.get("companies")
+            if isinstance(companies, list):
+                return companies
+        raise FinanceAPIError(f"Could not locate company list in Simply Wall St page: {url}")
 
     def _normalise_simplywall_ticker(self, company: dict[str, Any]) -> str:
         unique_symbol = company.get("uniqueSymbol")

@@ -1654,7 +1654,7 @@ APP_TEMPLATE = r"""
               </div>
             </div>
 
-            <label class="editor-label" for="complete_article_editor">Completed article</label>
+            <div class="editor-label" id="complete_article_editor_label">Completed article</div>
             <div class="rich-editor-shell">
               <div class="rich-toolbar" data-rich-toolbar="complete">
                 <button type="button" class="toolbar-button" data-command="bold">Bold</button>
@@ -1671,6 +1671,7 @@ APP_TEMPLATE = r"""
                 class="rich-editor"
                 contenteditable="true"
                 spellcheck="true"
+                aria-labelledby="complete_article_editor_label"
                 data-placeholder="Run the final details pass from the Write and review tab to populate the completed article here."
               ></div>
             </div>
