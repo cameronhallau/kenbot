@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
+import time
+from pathlib import Path
+
 from .config import Settings
-from .finance import FMPClient
+from .finance import FMPClient, FinanceAPIError
 from .io_utils import ensure_directory, read_text_if_exists, write_json, write_text
 from .llm import OpenAIClient
 from .models import ComplianceReport, FactPack, MoverCandidate, ResearchBrief
@@ -25,6 +29,8 @@ DEFAULT_MOTLEY_RULES = """
 - Note uncertainty if the exact catalyst is not confirmed
 - Keep the article concise and avoid generic filler
 """.strip()
+
+MARKET_MOVERS_CACHE_TTL_SECONDS = 15 * 60
 
 
 class Pipeline:
@@ -79,6 +85,46 @@ class Pipeline:
         write_json(self.settings.output_dir / "movers.json", [item.to_dict() for item in movers])
         return movers
 
+    def _market_movers_cache_path(self, move_window: str, limit: int) -> Path:
+        return self.settings.output_dir / f"market_movers_{move_window.lower()}_{limit}.json"
+
+    def _load_market_movers_cache(
+        self,
+        move_window: str,
+        limit: int,
+        *,
+        max_age_seconds: float | None = None,
+    ) -> list[MoverCandidate] | None:
+        cache_path = self._market_movers_cache_path(move_window, limit)
+        if not cache_path.exists():
+            return None
+        try:
+            payload = json.loads(cache_path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+        fetched_at = payload.get("fetched_at")
+        if max_age_seconds is not None:
+            if not isinstance(fetched_at, (int, float)):
+                return None
+            if time.time() - float(fetched_at) > max_age_seconds:
+                return None
+        movers = payload.get("movers")
+        if not isinstance(movers, list):
+            return None
+        try:
+            return [MoverCandidate(**item) for item in movers if isinstance(item, dict)]
+        except TypeError:
+            return None
+
+    def _write_market_movers_cache(self, move_window: str, limit: int, movers: list[MoverCandidate]) -> None:
+        write_json(
+            self._market_movers_cache_path(move_window, limit),
+            {
+                "fetched_at": time.time(),
+                "movers": [item.to_dict() for item in movers],
+            },
+        )
+
     def scan_uk_market(
         self,
         min_abs_day_move: float = 4.0,
@@ -87,13 +133,31 @@ class Pipeline:
         limit: int = 3,
         move_window: str = "1D",
     ) -> list[MoverCandidate]:
-        movers = self.finance.scan_uk_market(
-            min_abs_day_move=min_abs_day_move,
-            min_price=min_price,
-            min_avg_volume=min_avg_volume,
-            limit=limit,
-            move_window=move_window,
+        fresh_cache = self._load_market_movers_cache(
+            move_window,
+            limit,
+            max_age_seconds=MARKET_MOVERS_CACHE_TTL_SECONDS,
         )
+        if fresh_cache is not None:
+            write_json(self.settings.output_dir / "movers.json", [item.to_dict() for item in fresh_cache])
+            return fresh_cache
+
+        try:
+            movers = self.finance.scan_uk_market(
+                min_abs_day_move=min_abs_day_move,
+                min_price=min_price,
+                min_avg_volume=min_avg_volume,
+                limit=limit,
+                move_window=move_window,
+            )
+        except FinanceAPIError as exc:
+            stale_cache = self._load_market_movers_cache(move_window, limit)
+            if stale_cache is not None:
+                write_json(self.settings.output_dir / "movers.json", [item.to_dict() for item in stale_cache])
+                return stale_cache
+            raise
+
+        self._write_market_movers_cache(move_window, limit, movers)
         write_json(self.settings.output_dir / "movers.json", [item.to_dict() for item in movers])
         return movers
 

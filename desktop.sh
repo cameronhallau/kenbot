@@ -18,6 +18,10 @@ if [[ ! -x ".venv/bin/python" ]]; then
 fi
 
 if command -v lsof >/dev/null 2>&1; then
+  lsof -tiTCP:9000 -sTCP:LISTEN | xargs -r kill
+fi
+
+if command -v lsof >/dev/null 2>&1; then
   lsof -tiTCP:5000 -sTCP:LISTEN | xargs -r kill
 fi
 

@@ -15,6 +15,13 @@ if [[ ! -d .git ]]; then
   exit 1
 fi
 
+echo "Stopping any process on port 9000"
+if command -v lsof >/dev/null 2>&1; then
+  lsof -tiTCP:9000 -sTCP:LISTEN | xargs -r kill
+else
+  fuser -k 9000/tcp 2>/dev/null || true
+fi
+
 BRANCH="$(git branch --show-current)"
 if [[ -z "$BRANCH" ]]; then
   echo "Could not determine the current git branch."

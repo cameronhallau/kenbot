@@ -127,6 +127,11 @@ class FMPClient:
             follow_redirects=True,
             headers={"user-agent": "Mozilla/5.0 (KenHallBot Prototype)"},
         )
+        if response.status_code in {403, 429} or "Access denied" in response.text:
+            raise FinanceAPIError(
+                "Simply Wall St is temporarily rate-limiting mover lookups. "
+                "Please wait a few minutes and try again."
+            )
         response.raise_for_status()
         return response.text
 
