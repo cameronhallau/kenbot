@@ -2,6 +2,22 @@
 set -euo pipefail
 
 REPO_DIR="${HOME}/Documents/kenbot"
+PYTHON_BIN="${REPO_DIR}/.venv/bin/python"
+PIP_BIN="${REPO_DIR}/.venv/bin/pip"
+LOG_FILE="/tmp/kenhallbot-5000.log"
+
+kill_port_listener() {
+  local port="$1"
+  if command -v lsof >/dev/null 2>&1; then
+    local pids
+    pids="$(lsof -tiTCP:${port} -sTCP:LISTEN || true)"
+    if [[ -n "${pids}" ]]; then
+      kill ${pids}
+    fi
+  elif command -v fuser >/dev/null 2>&1; then
+    fuser -k "${port}/tcp" 2>/dev/null || true
+  fi
+}
 
 if [[ ! -d "${REPO_DIR}" ]]; then
   echo "Could not find ${REPO_DIR}"
@@ -16,11 +32,7 @@ if [[ ! -d .git ]]; then
 fi
 
 echo "Stopping any process on port 9000"
-if command -v lsof >/dev/null 2>&1; then
-  lsof -tiTCP:9000 -sTCP:LISTEN | xargs -r kill
-else
-  fuser -k 9000/tcp 2>/dev/null || true
-fi
+kill_port_listener 9000
 
 BRANCH="$(git branch --show-current)"
 if [[ -z "$BRANCH" ]]; then
@@ -37,26 +49,24 @@ if [[ ! -d .venv ]]; then
 fi
 
 echo "Installing latest editable build"
-./.venv/bin/python -m pip install --upgrade pip
-./.venv/bin/pip install -e .
+"${PYTHON_BIN}" -m pip install --upgrade pip
+"${PIP_BIN}" install -e .
 
 echo "Stopping any process on port 5000"
-if command -v lsof >/dev/null 2>&1; then
-  lsof -tiTCP:5000 -sTCP:LISTEN | xargs -r kill
-else
-  fuser -k 5000/tcp 2>/dev/null || true
-fi
+kill_port_listener 5000
 
 echo "Starting kenbot GUI on http://127.0.0.1:5000"
-setsid ./.venv/bin/python -m kenhallbot.gui >/tmp/kenhallbot-5000.log 2>&1 < /dev/null &
+nohup "${PYTHON_BIN}" -m kenhallbot.gui >"${LOG_FILE}" 2>&1 &
 
 sleep 1
 
 if lsof -nP -iTCP:5000 -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "Repository: ${REPO_DIR}"
+  echo "Python: ${PYTHON_BIN}"
   echo "kenbot is running on http://127.0.0.1:5000"
-  echo "Logs: /tmp/kenhallbot-5000.log"
+  echo "Logs: ${LOG_FILE}"
 else
   echo "kenbot did not start successfully."
-  echo "Check logs: /tmp/kenhallbot-5000.log"
+  echo "Check logs: ${LOG_FILE}"
   exit 1
 fi
