@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="${HOME}/Documents/kenbot-main"
+REPO_DIR="${HOME}/Documents/kenbot"
 URL="http://127.0.0.1:5000"
 LOG_FILE="/tmp/kenhallbot-5000.log"
 

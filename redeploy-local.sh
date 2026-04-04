@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_DIR="${HOME}/Documents/kenbot-main"
+REPO_DIR="${HOME}/Documents/kenbot"
 
 if [[ ! -d "${REPO_DIR}" ]]; then
   echo "Could not find ${REPO_DIR}"
